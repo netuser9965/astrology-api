@@ -278,3 +278,51 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
         "download_url": f"/reports/{filename}",
         "filename": filename,
     }
+@app.get("/success", response_class=HTMLResponse)
+def success_page():
+    return """
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>生成中...</title>
+</head>
+<body>
+<h2>正在生成你的命盤...</h2>
+
+<script>
+async function run() {
+  const data = JSON.parse(localStorage.getItem("astroData"));
+
+  if (!data) {
+    document.body.innerHTML = "找不到資料，請重新填寫";
+    return;
+  }
+
+  data.token = "PAID_OK";
+
+  const res = await fetch("/api/generate-report", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": "CHANGE_ME_TO_A_SECRET_KEY"
+    },
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    document.body.innerHTML = "生成失敗：" + JSON.stringify(result);
+    return;
+  }
+
+  window.location.href = result.download_url;
+}
+
+run();
+</script>
+
+</body>
+</html>
+"""
