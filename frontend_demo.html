@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>AI 財富命盤報告生成器</title>
+  <style>
+    body { font-family: Arial, "Noto Sans TC", sans-serif; background:#f6f7f9; padding:30px; }
+    .card { max-width:720px; margin:auto; background:white; padding:24px; border-radius:18px; box-shadow:0 4px 20px rgba(0,0,0,.08); }
+    input, select { width:100%; padding:10px; margin:8px 0 14px; border:1px solid #ccc; border-radius:8px; }
+    button { background:#111; color:white; padding:12px 20px; border:0; border-radius:10px; cursor:pointer; }
+    .result { margin-top:20px; padding:16px; background:#f0f2f5; border-radius:12px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>AI 財富命盤報告生成器</h1>
+
+  <label>姓名</label>
+  <input id="name" value="測試用戶">
+
+  <label>出生日期</label>
+  <input id="birth_date" type="date" value="2016-07-10">
+
+  <label>出生時間</label>
+  <input id="birth_time" type="time" value="05:38">
+
+  <label>出生地點</label>
+  <input id="birth_place" value="台北">
+
+  <label>性別</label>
+  <select id="gender">
+    <option>男</option>
+    <option>女</option>
+    <option>其他</option>
+  </select>
+
+  <button onclick="generate()">生成 PDF 報告</button>
+
+  <div id="result" class="result"></div>
+</div>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000";
+const API_KEY = "replace_this_with_a_long_random_secret_key";
+
+async function generate() {
+  const payload = {
+    name: document.getElementById("name").value,
+    birth_date: document.getElementById("birth_date").value,
+    birth_time: document.getElementById("birth_time").value,
+    birth_place: document.getElementById("birth_place").value,
+    gender: document.getElementById("gender").value,
+    timezone: "Asia/Taipei"
+  };
+
+  const res = await fetch(`${API_BASE}/api/generate-report`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": API_KEY
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    document.getElementById("result").innerHTML = "錯誤：" + JSON.stringify(data);
+    return;
+  }
+
+  document.getElementById("result").innerHTML =
+    `<b>PDF 已生成</b><br><a href="${API_BASE}${data.download_url}" target="_blank">下載 PDF 報告</a>`;
+}
+</script>
+</body>
+</html>
