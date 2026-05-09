@@ -194,15 +194,20 @@ async function generateReport() {{
     return;
   }}
 
-  const res = await fetch("/api/generate-report", {{
-    method: "POST",
-    headers: {{
-      "Content-Type": "application/json",
-      "X-API-Key": "{API_KEY}"
-    }},
-    body: JSON.stringify(payload)
-  }});
+ const payload = {
+  name: document.getElementById("name").value,
+  birth_date: document.getElementById("birth_date").value,
+  birth_time: document.getElementById("birth_time").value,
+  birth_place: document.getElementById("birth_place").value,
+  gender: document.getElementById("gender").value,
+  timezone: "Asia/Taipei"
+};
 
+// 👉 存資料
+localStorage.setItem("astroData", JSON.stringify(payload));
+
+// 👉 跳付款頁（你剛做的）
+window.location.href = "https://你的網站網址/付款頁";
   const data = await res.json();
 
   if (!res.ok) {{
