@@ -1,4 +1,4 @@
-PAYMENT_PAGE_URL = "https://astrology-api-l5tr.onrender.com/success"
+
 # -*- coding: utf-8 -*-
 import os
 import uuid
@@ -22,7 +22,7 @@ pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
 API_KEY = os.getenv("ASTRO_API_KEY", "CHANGE_ME_TO_A_SECRET_KEY")
 
 # ✅ 改成你的 WordPress 付款頁網址
-PAYMENT_PAGE_URL = "https://discoveryourdestiny.wordpress.com/付款頁"
+PAYMENT_PAGE_URL = "https://astrology-api-l5tr.onrender.com/success"
 
 OUTPUT_DIR = "generated_reports"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
