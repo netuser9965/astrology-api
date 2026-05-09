@@ -54,51 +54,51 @@ def home():
 
 @app.get("/form", response_class=HTMLResponse)
 def form_page():
-    return f"""
+    html = """
 <!doctype html>
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <title>AI 財富命盤報告生成器</title>
   <style>
-    body {{
+    body {
       font-family: Arial, "Noto Sans TC", sans-serif;
       background: #f5f6f8;
       margin: 0;
       padding: 40px 16px;
       color: #111;
-    }}
-    .wrap {{
+    }
+    .wrap {
       max-width: 760px;
       margin: auto;
       background: #fff;
       border-radius: 22px;
       padding: 32px;
       box-shadow: 0 8px 28px rgba(0,0,0,.08);
-    }}
-    h1 {{
+    }
+    h1 {
       font-size: 32px;
       margin-bottom: 8px;
-    }}
-    .sub {{
+    }
+    .sub {
       color: #555;
       margin-bottom: 28px;
       line-height: 1.7;
-    }}
-    label {{
+    }
+    label {
       display: block;
       margin: 16px 0 6px;
       font-weight: 700;
-    }}
-    input, select {{
+    }
+    input, select {
       width: 100%;
       box-sizing: border-box;
       padding: 13px;
       border: 1px solid #ccc;
       border-radius: 10px;
       font-size: 16px;
-    }}
-    button {{
+    }
+    button {
       margin-top: 24px;
       width: 100%;
       padding: 16px;
@@ -109,30 +109,15 @@ def form_page():
       font-size: 18px;
       font-weight: 700;
       cursor: pointer;
-    }}
-    .result {{
+    }
+    .result {
       margin-top: 24px;
       padding: 18px;
       background: #f0f2f5;
       border-radius: 14px;
       line-height: 1.8;
-    }}
-    .download {{
-      display: inline-block;
-      margin-top: 12px;
-      background: #0f7b3f;
-      color: white;
-      padding: 12px 18px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 700;
-    }}
-    .note {{
-      margin-top: 20px;
-      color: #777;
-      font-size: 14px;
-      line-height: 1.6;
-    }}
+      display: none;
+    }
   </style>
 </head>
 
@@ -141,8 +126,8 @@ def form_page():
     <h1>AI 財富命盤報告生成器</h1>
 
     <div class="sub">
-      輸入出生資料後，系統會自動生成你的個人財富命盤 PDF 報告。<br>
-      報告包含財富定位、收入模式、風險提醒與行動建議。
+      輸入出生資料後，系統會先保存資料，然後前往付款頁。<br>
+      付款完成後將產生你的個人財富命盤 PDF 報告。
     </div>
 
     <label>姓名</label>
@@ -164,67 +149,40 @@ def form_page():
       <option>其他</option>
     </select>
 
-    <button onclick="generateReport()">生成 PDF 報告</button>
+    <button onclick="goToPayment()">解鎖完整 PDF 報告</button>
 
-    <div id="result" class="result" style="display:none;"></div>
-
-    <div class="note">
-      目前為測試版：正式收費版會改成「付款成功後才生成完整 PDF」。
-    </div>
+    <div id="result" class="result"></div>
   </div>
 
 <script>
-async function generateReport() {{
+function goToPayment() {
   const resultBox = document.getElementById("result");
-  resultBox.style.display = "block";
-  resultBox.innerHTML = "正在生成報告，請稍候...";
 
-  const payload = {{
-    token: "PAID_OK",
+  const payload = {
     name: document.getElementById("name").value,
     birth_date: document.getElementById("birth_date").value,
     birth_time: document.getElementById("birth_time").value,
     birth_place: document.getElementById("birth_place").value,
     gender: document.getElementById("gender").value,
     timezone: "Asia/Taipei"
-  }};
+  };
 
-  if (!payload.birth_date || !payload.birth_time || !payload.birth_place) {{
+  if (!payload.birth_date || !payload.birth_time || !payload.birth_place) {
+    resultBox.style.display = "block";
     resultBox.innerHTML = "請填寫出生日期、時間與地點。";
     return;
-  }}
+  }
 
- const payload = {
-  name: document.getElementById("name").value,
-  birth_date: document.getElementById("birth_date").value,
-  birth_time: document.getElementById("birth_time").value,
-  birth_place: document.getElementById("birth_place").value,
-  gender: document.getElementById("gender").value,
-  timezone: "Asia/Taipei"
-};
+  localStorage.setItem("astroData", JSON.stringify(payload));
 
-// 👉 存資料
-localStorage.setItem("astroData", JSON.stringify(payload));
-
-// 👉 跳付款頁（你剛做的）
-window.location.href = "https://你的網站網址/付款頁";
-  const data = await res.json();
-
-  if (!res.ok) {{
-    resultBox.innerHTML = "生成失敗：" + JSON.stringify(data);
-    return;
-  }}
-
-  resultBox.innerHTML = `
-    <b>報告已生成成功！</b><br>
-    <a class="download" href="${{data.download_url}}" target="_blank">下載 PDF 報告</a>
-  `;
-}}
+  window.location.href = "https://discoveryourdestiny.wordpress.com/付款頁";
+}
 </script>
 
 </body>
 </html>
-    """
+"""
+    return html
 
 
 @app.post("/api/generate-report")
