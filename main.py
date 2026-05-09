@@ -1,4 +1,4 @@
-PAYMENT_PAGE_URL = "https://discoveryourdestiny.wordpress.com/付款頁"
+PAYMENT_PAGE_URL = "https://astrology-api-l5tr.onrender.com/success"
 # -*- coding: utf-8 -*-
 import os
 import uuid
