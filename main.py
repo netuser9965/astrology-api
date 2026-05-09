@@ -96,7 +96,10 @@ async function generateReport(){
 
 @app.post("/api/generate-report")
 def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
-    check_api_key(x_api_key)
+  check_api_key(x_api_key)
+
+if not data.token or data.token != "PAID_OK":
+    raise HTTPException(status_code=403, detail="請先完成付款")
     filename = f"wealth_report_{str(uuid.uuid4())[:8]}.pdf"
     path = os.path.join(OUTPUT_DIR, filename)
     doc = SimpleDocTemplate(path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
