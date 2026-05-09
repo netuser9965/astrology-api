@@ -21,7 +21,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 app = FastAPI(title="Secure Astrology Report API")
 app.mount("/reports", StaticFiles(directory=OUTPUT_DIR), name="reports")
 
-class BirthInput(BaseModel):token: Optional[str] = None
+class BirthInput(BaseModel):
+    token: Optional[str] = None
     name: Optional[str] = None
     birth_date: str
     birth_time: str
