@@ -126,4 +126,4 @@ if not data.token or data.token != "PAID_OK":
         Paragraph("免責聲明：本報告為占星與個人策略分析，不構成投資建議、法律建議或財務承諾。", body)
     ]
     doc.build(content)
-    return {"status": "success", "download_url": f"/reports/{filename}", "filename": filename}
+        return {"status": "success", "download_url": f"/reports/{filename}", "filename": filename}
