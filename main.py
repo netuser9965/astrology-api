@@ -96,34 +96,34 @@ async function generateReport(){
     return html.replace("__API_KEY__", API_KEY)
 
 @app.post("/api/generate-report")
-def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
-  check_api_key(x_api_key)
-
-if not data.token or data.token != "PAID_OK":
-    raise HTTPException(status_code=403, detail="請先完成付款")
-    filename = f"wealth_report_{str(uuid.uuid4())[:8]}.pdf"
-    path = os.path.join(OUTPUT_DIR, filename)
-    doc = SimpleDocTemplate(path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    title = ParagraphStyle("Title", fontName="STSong-Light", fontSize=20, leading=26)
-    h = ParagraphStyle("Header", fontName="STSong-Light", fontSize=14, leading=20)
-    body = ParagraphStyle("Body", fontName="STSong-Light", fontSize=11, leading=17)
-    content = [
-        Paragraph("個人財富命盤 AI 深度報告", title), Spacer(1, 20),
-        Paragraph(f"姓名：{data.name or '未填'}", body),
-        Paragraph(f"出生日期：{data.birth_date}", body),
-        Paragraph(f"出生時間：{data.birth_time}", body),
-        Paragraph(f"出生地點：{data.birth_place}", body),
-        Paragraph(f"性別：{data.gender or '未填'}", body), Spacer(1, 20),
-        Paragraph("一、財富定位", h),
-        Paragraph("你屬於資源整合與長期累積型財富模式。此類型適合透過專業能力、系統化收入與長期策略逐步建立財富。", body),
-        Paragraph("二、收入模式", h),
-        Paragraph("適合知識型、顧問型、技術服務、內容產品、資料分析與系統化收入。", body),
-        Paragraph("三、風險提醒", h),
-        Paragraph("需避免情緒決策、過度槓桿與短期衝動操作。越能建立紀律與風控，越能穩定累積。", body),
-        Paragraph("四、行動建議", h),
-        Paragraph("1. 建立穩定現金流<br/>2. 發展專業技能<br/>3. 設定風險上限<br/>4. 長期資產配置<br/>5. 建立可複製的系統收入", body),
-        Spacer(1, 20),
-        Paragraph("免責聲明：本報告為占星與個人策略分析，不構成投資建議、法律建議或財務承諾。", body)
-    ]
-    doc.build(content)
-        return {"status": "success", "download_url": f"/reports/{filename}", "filename": filename}
+                def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
+                  check_api_key(x_api_key)
+                
+                if not data.token or data.token != "PAID_OK":
+                    raise HTTPException(status_code=403, detail="請先完成付款")
+                    filename = f"wealth_report_{str(uuid.uuid4())[:8]}.pdf"
+                    path = os.path.join(OUTPUT_DIR, filename)
+                    doc = SimpleDocTemplate(path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+                    title = ParagraphStyle("Title", fontName="STSong-Light", fontSize=20, leading=26)
+                    h = ParagraphStyle("Header", fontName="STSong-Light", fontSize=14, leading=20)
+                    body = ParagraphStyle("Body", fontName="STSong-Light", fontSize=11, leading=17)
+                    content = [
+                        Paragraph("個人財富命盤 AI 深度報告", title), Spacer(1, 20),
+                        Paragraph(f"姓名：{data.name or '未填'}", body),
+                        Paragraph(f"出生日期：{data.birth_date}", body),
+                        Paragraph(f"出生時間：{data.birth_time}", body),
+                        Paragraph(f"出生地點：{data.birth_place}", body),
+                        Paragraph(f"性別：{data.gender or '未填'}", body), Spacer(1, 20),
+                        Paragraph("一、財富定位", h),
+                        Paragraph("你屬於資源整合與長期累積型財富模式。此類型適合透過專業能力、系統化收入與長期策略逐步建立財富。", body),
+                        Paragraph("二、收入模式", h),
+                        Paragraph("適合知識型、顧問型、技術服務、內容產品、資料分析與系統化收入。", body),
+                        Paragraph("三、風險提醒", h),
+                        Paragraph("需避免情緒決策、過度槓桿與短期衝動操作。越能建立紀律與風控，越能穩定累積。", body),
+                        Paragraph("四、行動建議", h),
+                        Paragraph("1. 建立穩定現金流<br/>2. 發展專業技能<br/>3. 設定風險上限<br/>4. 長期資產配置<br/>5. 建立可複製的系統收入", body),
+                        Spacer(1, 20),
+                        Paragraph("免責聲明：本報告為占星與個人策略分析，不構成投資建議、法律建議或財務承諾。", body)
+                    ]
+                    doc.build(content)
+                        return {"status": "success", "download_url": f"/reports/{filename}", "filename": filename}
