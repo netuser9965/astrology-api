@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import os
 import uuid
@@ -21,8 +20,15 @@ pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
 
 API_KEY = os.getenv("ASTRO_API_KEY", "CHANGE_ME_TO_A_SECRET_KEY")
 
-# ✅ 改成你的 WordPress 付款頁網址
-PAYMENT_PAGE_URL = "https://astrology-api-l5tr.onrender.com/success"
+BASE_URL = os.getenv(
+    "BASE_URL",
+    "https://astrology-api-l5tr.onrender.com"
+)
+
+PAYMENT_PAGE_URL = os.getenv(
+    "PAYMENT_PAGE_URL",
+    "https://astrology-api-l5tr.onrender.com/success"
+)
 
 OUTPUT_DIR = "generated_reports"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -39,11 +45,97 @@ class BirthInput(BaseModel):
     birth_place: str
     gender: Optional[str] = None
     timezone: Optional[str] = "Asia/Taipei"
+    plan: Optional[str] = "free"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 def check_api_key(x_api_key: Optional[str]):
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
+
+
+def normalize_plan(plan: Optional[str]) -> str:
+    if not plan:
+        return "free"
+
+    plan = plan.lower().strip()
+
+    allowed = ["free", "starter", "standard", "deep"]
+
+    if plan not in allowed:
+        return "free"
+
+    return plan
+
+
+def get_plan_title(plan: str) -> str:
+    titles = {
+        "free": "免費星盤報告",
+        "starter": "入門版財富命盤報告",
+        "standard": "標準版財富命盤報告",
+        "deep": "深度版財富命盤報告",
+    }
+
+    return titles.get(plan, "免費星盤報告")
+
+
+def get_plan_content(plan: str, data: BirthInput):
+    if plan == "free":
+        return [
+            ("一、基本命盤摘要",
+             "這是一份免費版星盤摘要，提供你的出生資料、基本能量方向與初步財富傾向。若需要完整宮位、相位、財運、事業與年度策略，可升級完整報告。"),
+
+            ("二、財富傾向",
+             "你的財富模式需要從長期累積、專業能力與穩定規劃開始。免費版僅提供簡要方向，適合作為了解命盤的第一步。"),
+
+            ("三、行動建議",
+             "建議先建立穩定現金流、記錄收入支出、培養可長期變現的技能，避免衝動投資與短期情緒決策。"),
+        ]
+
+    if plan == "starter":
+        return [
+            ("一、個人財富定位",
+             "你屬於需要透過專業能力與穩定累積來建立財富的類型。入門版著重於基本性格、收入模式與財務習慣分析。"),
+
+            ("二、收入模式",
+             "適合知識型服務、技術服務、內容產品、顧問服務、斜槓收入與穩定現金流累積。"),
+
+            ("三、風險提醒",
+             "需要避免短期衝動、過度相信單一機會，以及沒有風控就投入大量資金。"),
+        ]
+
+    if plan == "standard":
+        return [
+            ("一、財富定位",
+             "你適合建立系統化財富模式，透過專業能力、資源整合、長期規劃與穩定收入逐步放大財務成果。"),
+
+            ("二、事業與收入方向",
+             "標準版建議你把重點放在可複製的服務、可持續累積的技能、可轉化為產品的知識，以及能帶來長期回報的資產配置。"),
+
+            ("三、感情與合作對財務的影響",
+             "合作、人脈與伴侶關係可能影響你的財務決策。需要建立清楚界線，避免因情緒、人情或短期誘惑而破壞財務節奏。"),
+
+            ("四、風險與修正策略",
+             "你需要建立風險上限、現金流安全墊，以及定期檢討機制。越能紀律化，越能穩定累積財富。"),
+        ]
+
+    return [
+        ("一、深度財富定位",
+         "你的人生財富主題不只是賺錢，而是如何把能力、資源、時間與選擇整合成長期系統。深度版強調人生課題、財務模式與長期策略。"),
+
+        ("二、核心收入模式",
+         "你適合發展專業型、顧問型、內容型、技術型或系統型收入。當你的能力能被產品化、流程化、規模化，財富成長速度會明顯提高。"),
+
+        ("三、事業策略",
+         "你的事業需要避免頻繁換方向。最有利的策略是選定一個可長期累積的主軸，持續優化產品、客戶、流程與信任感。"),
+
+        ("四、財務風險",
+         "需特別注意過度槓桿、短線衝動、追逐熱門機會，以及因壓力而做出錯誤決策。越能先建立安全邊界，越能承受更大的成長。"),
+
+        ("五、年度行動建議",
+         "建議建立三層架構：第一層是穩定現金流，第二層是技能與產品化，第三層是長期資產配置。這會讓你的財富不是靠運氣，而是靠系統累積。"),
+    ]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -169,7 +261,8 @@ function goToPayment() {{
     birth_time: document.getElementById("birth_time").value,
     birth_place: document.getElementById("birth_place").value,
     gender: document.getElementById("gender").value,
-    timezone: "Asia/Taipei"
+    timezone: "Asia/Taipei",
+    plan: "deep"
   }};
 
   if (!payload.birth_date || !payload.birth_time || !payload.birth_place) {{
@@ -279,8 +372,11 @@ generatePDF();
 def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
     check_api_key(x_api_key)
 
-    if not data.token or data.token != "PAID_OK":
-        raise HTTPException(status_code=403, detail="請先完成付款")
+    plan = normalize_plan(data.plan)
+
+    if plan != "free":
+        if not data.token or data.token != "PAID_OK":
+            raise HTTPException(status_code=403, detail="請先完成付款")
 
     filename = f"wealth_report_{str(uuid.uuid4())[:8]}.pdf"
     path = os.path.join(OUTPUT_DIR, filename)
@@ -306,6 +402,8 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
         fontName="STSong-Light",
         fontSize=14,
         leading=20,
+        spaceBefore=14,
+        spaceAfter=8,
     )
 
     body = ParagraphStyle(
@@ -313,10 +411,14 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
         fontName="STSong-Light",
         fontSize=11,
         leading=17,
+        spaceAfter=8,
     )
 
+    plan_title = get_plan_title(plan)
+    plan_sections = get_plan_content(plan, data)
+
     content = [
-        Paragraph("個人財富命盤 AI 深度報告", title),
+        Paragraph(plan_title, title),
         Spacer(1, 20),
 
         Paragraph(f"姓名：{data.name or '未填'}", body),
@@ -324,47 +426,34 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
         Paragraph(f"出生時間：{data.birth_time}", body),
         Paragraph(f"出生地點：{data.birth_place}", body),
         Paragraph(f"性別：{data.gender or '未填'}", body),
+        Paragraph(f"時區：{data.timezone or '未填'}", body),
+        Paragraph(f"報告方案：{plan}", body),
         Spacer(1, 20),
-
-        Paragraph("一、財富定位", header),
-        Paragraph(
-            "你屬於資源整合與長期累積型財富模式。此類型適合透過專業能力、系統化收入與長期策略逐步建立財富。",
-            body,
-        ),
-
-        Paragraph("二、收入模式", header),
-        Paragraph(
-            "適合知識型、顧問型、技術服務、內容產品、資料分析與系統化收入。",
-            body,
-        ),
-
-        Paragraph("三、風險提醒", header),
-        Paragraph(
-            "需避免情緒決策、過度槓桿與短期衝動操作。越能建立紀律與風控，越能穩定累積。",
-            body,
-        ),
-
-        Paragraph("四、行動建議", header),
-        Paragraph(
-            "1. 建立穩定現金流<br/>"
-            "2. 發展專業技能<br/>"
-            "3. 設定風險上限<br/>"
-            "4. 長期資產配置<br/>"
-            "5. 建立可複製的系統收入",
-            body,
-        ),
-
-        Spacer(1, 20),
-        Paragraph(
-            "免責聲明：本報告為占星與個人策略分析，不構成投資建議、法律建議或財務承諾。",
-            body,
-        ),
     ]
+
+    if data.latitude is not None and data.longitude is not None:
+        content.append(Paragraph(f"出生地經緯度：{data.latitude}, {data.longitude}", body))
+        content.append(Spacer(1, 10))
+
+    for section_title, section_text in plan_sections:
+        content.append(Paragraph(section_title, header))
+        content.append(Paragraph(section_text, body))
+
+    content.extend([
+        Spacer(1, 20),
+        Paragraph(
+            "免責聲明：本報告為占星與個人策略分析，僅供自我探索、娛樂與參考，不構成投資建議、法律建議、醫療建議或財務承諾。",
+            body,
+        ),
+    ])
 
     doc.build(content)
 
+    download_url = f"{BASE_URL}/reports/{filename}"
+
     return {
         "status": "success",
-        "download_url": f"/reports/{filename}",
+        "plan": plan,
+        "download_url": download_url,
         "filename": filename,
     }
