@@ -42,16 +42,8 @@ except Exception:
 pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
 
 API_KEY = os.getenv("ASTRO_API_KEY", "CHANGE_ME_TO_A_SECRET_KEY")
-
-BASE_URL = os.getenv(
-    "BASE_URL",
-    "https://astrology-api-l5tr.onrender.com"
-)
-
-PAYMENT_PAGE_URL = os.getenv(
-    "PAYMENT_PAGE_URL",
-    "https://astrology-api-l5tr.onrender.com/success"
-)
+BASE_URL = os.getenv("BASE_URL", "https://astrology-api-l5tr.onrender.com")
+PAYMENT_PAGE_URL = os.getenv("PAYMENT_PAGE_URL", "https://astrology-api-l5tr.onrender.com/success")
 
 OUTPUT_DIR = "generated_reports"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -408,6 +400,7 @@ def calculate_chart(data: BirthInput) -> Dict:
 
     try:
         node_deg = calc_ut_safe(jd_ut, swe.TRUE_NODE)
+
         extra_points.append({
             "name": "北交點",
             "en_name": "North Node",
@@ -419,6 +412,7 @@ def calculate_chart(data: BirthInput) -> Dict:
         })
 
         south_deg = normalize_degree(node_deg + 180.0)
+
         extra_points.append({
             "name": "南交點",
             "en_name": "South Node",
@@ -433,6 +427,7 @@ def calculate_chart(data: BirthInput) -> Dict:
 
     try:
         lilith_deg = calc_ut_safe(jd_ut, swe.MEAN_APOG)
+
         extra_points.append({
             "name": "莉莉絲",
             "en_name": "Lilith",
@@ -447,6 +442,7 @@ def calculate_chart(data: BirthInput) -> Dict:
 
     try:
         chiron_deg = calc_ut_safe(jd_ut, swe.CHIRON)
+
         extra_points.append({
             "name": "凱龍星",
             "en_name": "Chiron",
@@ -662,183 +658,6 @@ def get_core_summary(chart: Dict) -> str:
 
 
 def generate_ai_advice(chart: Dict) -> List[Tuple[str, str]]:
-    def get_plan_label(plan: str) -> str:
-    labels = {
-        "free": "免費排出星盤｜NT$0｜引流體驗",
-        "starter": "入門星盤報告｜NT$199｜低門檻付費",
-        "standard": "AI 財富命盤標準報告｜NT$499｜主力商品",
-        "deep": "年度深度命盤全書｜NT$999｜高單價完整報告",
-    }
-    return labels.get(plan, labels["free"])
-
-
-def get_paid_sections(plan: str, chart: Dict) -> List[Tuple[str, str]]:
-    sun = next((p for p in chart["planets"] if p["name"] == "太陽"), None)
-    moon = next((p for p in chart["planets"] if p["name"] == "月亮"), None)
-    mercury = next((p for p in chart["planets"] if p["name"] == "水星"), None)
-    venus = next((p for p in chart["planets"] if p["name"] == "金星"), None)
-    mars = next((p for p in chart["planets"] if p["name"] == "火星"), None)
-    jupiter = next((p for p in chart["planets"] if p["name"] == "木星"), None)
-    saturn = next((p for p in chart["planets"] if p["name"] == "土星"), None)
-
-    asc_text = degree_to_dms_text(chart["angles"]["ASC 上升"])
-    mc_text = degree_to_dms_text(chart["angles"]["MC 天頂"])
-
-    sun_text = f"{sun['position']} 第{sun['house']}宮" if sun else "資料不足"
-    moon_text = f"{moon['position']} 第{moon['house']}宮" if moon else "資料不足"
-    mercury_text = f"{mercury['position']} 第{mercury['house']}宮" if mercury else "資料不足"
-    venus_text = f"{venus['position']} 第{venus['house']}宮" if venus else "資料不足"
-    mars_text = f"{mars['position']} 第{mars['house']}宮" if mars else "資料不足"
-    jupiter_text = f"{jupiter['position']} 第{jupiter['house']}宮" if jupiter else "資料不足"
-    saturn_text = f"{saturn['position']} 第{saturn['house']}宮" if saturn else "資料不足"
-
-    top_aspects = chart.get("aspects", [])[:5]
-    aspect_text = "、".join([
-        f"{a['p1']} {a['aspect']} {a['p2']}（容許度 {a['orb_text']}）"
-        for a in top_aspects
-    ]) or "主要相位資料不足"
-
-    if plan == "starter":
-        return [
-            (
-                "命盤三大核心主題",
-                f"你的命盤可以先從三個核心來看：第一，太陽位於 {sun_text}，代表人生目標與自我認同；第二，月亮位於 {moon_text}，代表情緒需求與安全感來源；第三，上升位於 {asc_text}，代表你面對世界的外在方式。入門版的重點，是先讓你掌握自己的基本人格、優勢與需要調整的方向。"
-            ),
-            (
-                "核心人格：太陽 / 月亮 / 上升",
-                f"太陽顯示你想成為什麼樣的人，月亮顯示你真正需要什麼，上升顯示別人第一眼如何感受到你。當太陽 {sun_text}、月亮 {moon_text}、上升 {asc_text} 同時運作時，你的人生會在自我要求、情緒需求與外在表達之間找到平衡。"
-            ),
-            (
-                "星體位置快速解讀",
-                f"水星位於 {mercury_text}，影響你的思考與表達；金星位於 {venus_text}，影響感情、審美與價值交換；火星位於 {mars_text}，代表行動力、慾望與界線。這些星體組合顯示，你需要找到適合自己的節奏，而不是照別人的期待生活。"
-            ),
-            (
-                "性格優勢與盲點",
-                f"你的優勢來自於能把不同經驗整合成自己的判斷，但盲點是容易在壓力、關係或金錢議題中忽略真正需求。主要相位可參考：{aspect_text}。這些相位提醒你，人生不是只有單一方向，而是需要學會調整內在拉扯。"
-            ),
-            (
-                "入門行動建議",
-                "建議先做三件事：第一，確認自己真正重視的價值；第二，建立穩定的工作與生活節奏；第三，避免在情緒波動時做重大金錢或關係決定。這份入門報告適合當作自我認識的第一步。"
-            ),
-        ]
-
-    if plan == "standard":
-        return [
-            (
-                "命盤三大核心結論",
-                f"第一，你的內在運作由太陽 {sun_text}、月亮 {moon_text} 與上升 {asc_text} 共同構成，代表你需要在自我要求、情緒安全與外在表達之間建立穩定整合。第二，財富與事業不能只看短期機會，還要看金星 {venus_text}、木星 {jupiter_text}、土星 {saturn_text} 與 MC {mc_text} 的長期結構。第三，關係與成熟方向會受到主要相位與交點課題影響，這些會決定你如何從重複模式中長大。"
-            ),
-            (
-                "核心性格的立體透視：太陽、月亮、上升",
-                f"這一章回答的是：你真正是如何運作的人。太陽 {sun_text} 代表你想建立的人生方向，月亮 {moon_text} 代表你內在真正需要的安全感，上升 {asc_text} 代表你如何進入世界。當這三者互相拉扯時，你可能會一邊想追求秩序與成果，一邊又需要自由、理解與被看見。實際建議是：不要只靠意志硬撐，也要建立能照顧情緒的生活結構。"
-            ),
-            (
-                "思維與表達：水星的運作模式",
-                f"水星位於 {mercury_text}，顯示你的思考方式、學習能力與表達習慣。這代表你適合把複雜資訊整理成系統，也適合做分析、寫作、研究、顧問或需要精準表達的工作。盲點是容易想太多，或在情緒壓力下反覆檢查。建議把腦中的資訊外化成筆記、流程、表格或產品。"
-            ),
-            (
-                "感情與吸引力：金星與月亮",
-                f"金星位於 {venus_text}，月亮位於 {moon_text}。金星代表你喜歡什麼、如何吸引他人，也代表價值交換；月亮代表你真正的情緒需求。這組合顯示你在關係中不能只追求表面和諧，也要能被理解、被尊重。感情上的成熟關鍵，是學會清楚說出需求，而不是用退讓或控制來維持關係。"
-            ),
-            (
-                "行動力與慾望：火星",
-                f"火星位於 {mars_text}，代表你的行動方式、競爭心與界線。這顯示你需要有可以主動表現的舞台，也需要被允許用自己的方式做決定。若火星能量被壓抑，容易變成急躁、拖延或突然爆發。實際建議是：把行動力導向可累積的專案，而不是短期情緒反應。"
-            ),
-            (
-                "財富模式：第2宮、第8宮、金星、木星",
-                f"財富模式要同時看收入能力、資源交換與長期機會。金星 {venus_text} 顯示你的價值交換方式，木星 {jupiter_text} 顯示機會來源，土星 {saturn_text} 顯示需要負責與累積的地方。你的金錢策略不適合只靠運氣，而適合透過專業能力、內容、服務、顧問、系統化流程或長期資源管理來累積。"
-            ),
-            (
-                "事業方向：MC、第10宮、土星與木星",
-                f"MC 位於 {mc_text}，代表社會角色與事業定位。搭配木星 {jupiter_text} 與土星 {saturn_text}，你的事業發展需要兼顧創新、專業、制度與長期累積。適合的方向包括知識服務、資料分析、科技工具、顧問型服務、內容產品、身心靈與策略整合。避免只做沒有累積性的短期工作。"
-            ),
-            (
-                "主要相位與內在動力",
-                f"主要相位顯示內在推力與拉扯，目前重要相位包括：{aspect_text}。相位不是好壞，而是能量如何互相影響。緊張相位會帶來壓力，但也會逼你成長；和諧相位會帶來天賦，但若不用也會浪費。建議把相位視為人生的操作說明書。"
-            ),
-            (
-                "南北交點、莉莉絲與凱龍星",
-                "南北交點代表舊模式與新方向，莉莉絲代表被壓抑的慾望與界線，凱龍星代表傷口與可轉化的天賦。這一組不是單純的神秘點，而是你人生中容易反覆出現的深層課題。真正的成長，是不再被舊模式牽著走，而是把傷口轉成洞察力，把陰影轉成界線。"
-            ),
-            (
-                "風險提醒與實際行動建議",
-                "你的風險不是沒有能力，而是容易在壓力、關係或金錢選擇中同時想要太多方向。建議建立三層策略：第一，穩定現金流；第二，把能力產品化；第三，建立長期資產與可複製流程。避免保證式投資、情緒消費與沒有邊界的合作。"
-            ),
-            (
-                "總結：如何用這張命盤做人生決策",
-                "這張命盤不是要限制你，而是幫你看見自己的運作模式。當你知道自己的核心需求、行動方式、財富模式與關係課題，就能少走一些重複的路。真正好的命盤使用方式，是把它變成決策工具：知道何時累積、何時表達、何時合作、何時止損。"
-            ),
-        ]
-
-    if plan == "deep":
-        return [
-            (
-                "命盤三大核心主題",
-                f"第一主題是人格結構：太陽 {sun_text}、月亮 {moon_text}、上升 {asc_text} 形成你的基本人生運作。第二主題是現實成就：MC {mc_text}、木星 {jupiter_text}、土星 {saturn_text} 顯示你如何建立事業、責任與長期成果。第三主題是深層轉化：主要相位、南北交點、莉莉絲與凱龍星會反覆推動你面對關係、資源與自我價值的成熟課題。"
-            ),
-            (
-                "第一部分：命盤深度解剖與靈魂結構分析",
-                "深度版不是只看單一星體，而是看整張命盤如何互相牽動。太陽代表人生方向，月亮代表情緒底層，上升代表你如何進入世界；宮位代表人生場景，相位代表內在動力，交點與特殊點則代表長期課題。這些合起來，才是完整的命盤故事。"
-            ),
-            (
-                "核心性格的立體透視：日月升的三角張力",
-                f"太陽 {sun_text}、月亮 {moon_text}、上升 {asc_text} 是這張命盤的三角骨架。你可能一方面想把生活整理得有秩序，一方面又需要精神自由與情緒空間。外在表達可能比內在更靈活，但內心其實需要穩定、安全與可掌握感。"
-            ),
-            (
-                "行星落點與人格功能",
-                f"水星 {mercury_text} 影響你的學習與表達；金星 {venus_text} 影響關係與價值交換；火星 {mars_text} 影響行動力；木星 {jupiter_text} 帶來擴張機會；土星 {saturn_text} 要求你成熟與負責。這些功能若能整合，你會更適合發展可長期累積的專業系統。"
-            ),
-            (
-                "宮位重心與人生主場景",
-                "宮位顯示人生能量集中在哪些領域。若多顆星集中在某些宮位，代表這些領域會成為人生反覆學習的主場景。你需要觀察哪些議題總是重複出現：家庭、關係、工作、財富、精神探索或社會定位，這些就是命盤要你整理的核心功課。"
-            ),
-            (
-                "主要相位與內在動力",
-                f"目前主要相位包括：{aspect_text}。深度版會把相位視為內在角色之間的對話。某些相位帶來天賦，某些相位帶來壓力，但真正的重點不是好壞，而是你能否把矛盾變成推動力。"
-            ),
-            (
-                "四個交點與人生十字軸",
-                f"ASC {asc_text}、DSC {degree_to_dms_text(chart['angles']['DSC 下降'])}、MC {mc_text}、IC {degree_to_dms_text(chart['angles']['IC 天底'])} 形成你的人生十字軸。它同時描述自我、關係、家庭根基與社會成就。當這四軸清楚，你會更知道什麼是自己的路，什麼只是外界期待。"
-            ),
-            (
-                "南北交點、黑月莉莉絲與凱龍星",
-                "南交點代表熟悉但容易卡住的模式，北交點代表今生要發展的新能力。莉莉絲顯示你不願被控制或被壓抑的地方，凱龍星顯示傷口如何轉化成天賦。深度版的重點，是把這些點看成一條成熟主線，而不是零散名詞。"
-            ),
-            (
-                "感情模式與互動方式",
-                f"感情模式需要看月亮 {moon_text}、金星 {venus_text} 與第七宮軸線。你在關係中需要的不只是吸引力，也需要理解、尊重與可對話的空間。成熟關係不是完全沒有衝突，而是能把需求說清楚，並建立雙方都能承擔的界線。"
-            ),
-            (
-                "事業發展與社會定位",
-                f"事業定位以 MC {mc_text} 為核心，並參考木星 {jupiter_text} 與土星 {saturn_text}。你適合建立自己的專業識別，而不是一直追逐別人的模式。長期來看，可發展顧問、內容、分析、科技、身心靈策略或系統整合型服務。"
-            ),
-            (
-                "財富運作與資源整合策略",
-                f"財富不是單純賺多少，而是資源如何流動。金星 {venus_text} 顯示價值交換，木星 {jupiter_text} 顯示機會擴張，土星 {saturn_text} 顯示限制與責任。建議把收入分成穩定現金流、專業產品化、長期資產三層。"
-            ),
-            (
-                "健康節律與日常修復模式",
-                "健康在占星報告中只作生活節律參考，不作醫療判斷。你的修復關鍵在於規律、睡眠、情緒排放與工作節奏。當壓力累積時，身體會提醒你需要放慢、整理與重新分配能量。"
-            ),
-            (
-                "長周期運勢與年度轉折框架",
-                "年度策略不是預言事件，而是安排節奏。你可以把一年分成整理期、推進期、檢討期與擴張期。當命盤中的土星、木星或食相觸動重要位置時，適合重新檢查責任、機會與方向。"
-            ),
-            (
-                "逐月行動曆與季度策略",
-                "第一季適合整理資料、修正定位與建立基本流程；第二季適合測試產品、增加曝光與建立合作；第三季適合檢查成效、調整價格與優化服務；第四季適合整合成果、沉澱品牌與規劃下一年度。這是策略地圖，不是保證事件。"
-            ),
-            (
-                "深層課題與成熟方向",
-                "你的深層課題是學會把敏感、壓力、慾望與責任整合成自己的力量。成熟不是壓抑自己，而是知道什麼時候表達、什麼時候等待、什麼時候切割不適合的人事物。"
-            ),
-            (
-                "整體閱讀總結與後續建議",
-                "深度命盤的價值在於讓你看見長期模式。建議每三個月回來重讀一次：第一次看人格，第二次看財富，第三次看關係，第四次看年度策略。命盤不是一次看完就結束，而是可以反覆使用的人生地圖。"
-            ),
-        ]
-
-    return []
     mc_sign = zodiac_position(chart["angles"]["MC 天頂"])["full_text"]
 
     return [
@@ -859,6 +678,189 @@ def get_paid_sections(plan: str, chart: Dict) -> List[Tuple[str, str]]:
             "感情模式重視安全感與理解，需要能溝通、能互相支持的關係。若壓抑需求，容易在關係中累積不滿。"
         ),
     ]
+
+
+def get_plan_label(plan: str) -> str:
+    labels = {
+        "free": "免費排出星盤｜NT$0｜引流體驗",
+        "starter": "入門星盤報告｜NT$199｜低門檻付費",
+        "standard": "AI 財富命盤標準報告｜NT$499｜主力商品",
+        "deep": "年度深度命盤全書｜NT$999｜高單價完整報告",
+    }
+
+    return labels.get(plan, labels["free"])
+
+
+def get_point_text(chart: Dict, name: str) -> str:
+    point = next((p for p in chart["all_points"] if p["name"] == name), None)
+
+    if not point:
+        return "資料不足"
+
+    return f"{point['position']} 第{point['house']}宮"
+
+
+def get_paid_sections(plan: str, chart: Dict) -> List[Tuple[str, str]]:
+    sun_text = get_point_text(chart, "太陽")
+    moon_text = get_point_text(chart, "月亮")
+    mercury_text = get_point_text(chart, "水星")
+    venus_text = get_point_text(chart, "金星")
+    mars_text = get_point_text(chart, "火星")
+    jupiter_text = get_point_text(chart, "木星")
+    saturn_text = get_point_text(chart, "土星")
+
+    asc_text = degree_to_dms_text(chart["angles"]["ASC 上升"])
+    dsc_text = degree_to_dms_text(chart["angles"]["DSC 下降"])
+    mc_text = degree_to_dms_text(chart["angles"]["MC 天頂"])
+    ic_text = degree_to_dms_text(chart["angles"]["IC 天底"])
+
+    top_aspects = chart.get("aspects", [])[:5]
+    aspect_text = "、".join([
+        f"{a['p1']} {a['aspect']} {a['p2']}（容許度 {a['orb_text']}）"
+        for a in top_aspects
+    ]) or "主要相位資料不足"
+
+    if plan == "starter":
+        return [
+            (
+                "命盤三大核心主題",
+                f"你的命盤可以先從三個核心來看：第一，太陽位於 {sun_text}，代表人生目標與自我認同；第二，月亮位於 {moon_text}，代表情緒需求與安全感來源；第三，上升位於 {asc_text}，代表你面對世界的外在方式。入門版的重點，是先讓你掌握自己的基本人格、優勢與需要調整的方向。"
+            ),
+            (
+                "核心人格：太陽 / 月亮 / 上升",
+                f"太陽顯示你想成為什麼樣的人，月亮顯示你真正需要什麼，上升顯示別人第一眼如何感受到你。當太陽 {sun_text}、月亮 {moon_text}、上升 {asc_text} 同時運作時，你的人生會在自我要求、情緒需求與外在表達之間找到平衡。"
+            ),
+            (
+                "星體位置快速解讀",
+                f"水星位於 {mercury_text}，影響你的思考與表達；金星位於 {venus_text}，影響感情、審美與價值交換；火星位於 {mars_text}，代表行動力、慾望與界線。"
+            ),
+            (
+                "性格優勢與盲點",
+                f"你的優勢來自於能把不同經驗整合成自己的判斷，但盲點是容易在壓力、關係或金錢議題中忽略真正需求。主要相位可參考：{aspect_text}。"
+            ),
+            (
+                "入門行動建議",
+                "建議先做三件事：第一，確認自己真正重視的價值；第二，建立穩定的工作與生活節奏；第三，避免在情緒波動時做重大金錢或關係決定。"
+            ),
+        ]
+
+    if plan == "standard":
+        return [
+            (
+                "命盤三大核心結論",
+                f"第一，你的內在運作由太陽 {sun_text}、月亮 {moon_text} 與上升 {asc_text} 共同構成。第二，財富與事業不能只看短期機會，還要看金星 {venus_text}、木星 {jupiter_text}、土星 {saturn_text} 與 MC {mc_text} 的長期結構。第三，關係與成熟方向會受到主要相位與交點課題影響，這些會決定你如何從重複模式中長大。"
+            ),
+            (
+                "核心性格的立體透視：太陽、月亮、上升",
+                f"太陽 {sun_text} 代表你想建立的人生方向，月亮 {moon_text} 代表你內在真正需要的安全感，上升 {asc_text} 代表你如何進入世界。當這三者互相拉扯時，你需要建立能照顧情緒的生活結構。"
+            ),
+            (
+                "思維與表達：水星的運作模式",
+                f"水星位於 {mercury_text}，顯示你的思考方式、學習能力與表達習慣。這代表你適合把複雜資訊整理成系統，也適合做分析、寫作、研究、顧問或需要精準表達的工作。"
+            ),
+            (
+                "感情與吸引力：金星與月亮",
+                f"金星位於 {venus_text}，月亮位於 {moon_text}。金星代表你喜歡什麼、如何吸引他人，也代表價值交換；月亮代表你真正的情緒需求。成熟關係的關鍵，是學會清楚說出需求，而不是用退讓或控制來維持關係。"
+            ),
+            (
+                "行動力與慾望：火星",
+                f"火星位於 {mars_text}，代表你的行動方式、競爭心與界線。若火星能量被壓抑，容易變成急躁、拖延或突然爆發。實際建議是：把行動力導向可累積的專案。"
+            ),
+            (
+                "財富模式：第2宮、第8宮、金星、木星",
+                f"財富模式要同時看收入能力、資源交換與長期機會。金星 {venus_text} 顯示你的價值交換方式，木星 {jupiter_text} 顯示機會來源，土星 {saturn_text} 顯示需要負責與累積的地方。你的金錢策略不適合只靠運氣，而適合透過專業能力、內容、服務、顧問、系統化流程或長期資源管理來累積。"
+            ),
+            (
+                "事業方向：MC、第10宮、土星與木星",
+                f"MC 位於 {mc_text}，代表社會角色與事業定位。搭配木星 {jupiter_text} 與土星 {saturn_text}，你的事業發展需要兼顧創新、專業、制度與長期累積。適合的方向包括知識服務、資料分析、科技工具、顧問型服務、內容產品、身心靈與策略整合。"
+            ),
+            (
+                "主要相位與內在動力",
+                f"主要相位顯示內在推力與拉扯，目前重要相位包括：{aspect_text}。相位不是好壞，而是能量如何互相影響。緊張相位會帶來壓力，但也會逼你成長；和諧相位會帶來天賦，但若不用也會浪費。"
+            ),
+            (
+                "南北交點、莉莉絲與凱龍星",
+                "南北交點代表舊模式與新方向，莉莉絲代表被壓抑的慾望與界線，凱龍星代表傷口與可轉化的天賦。真正的成長，是不再被舊模式牽著走，而是把傷口轉成洞察力，把陰影轉成界線。"
+            ),
+            (
+                "風險提醒與實際行動建議",
+                "你的風險不是沒有能力，而是容易在壓力、關係或金錢選擇中同時想要太多方向。建議建立三層策略：第一，穩定現金流；第二，把能力產品化；第三，建立長期資產與可複製流程。"
+            ),
+            (
+                "總結：如何用這張命盤做人生決策",
+                "這張命盤不是要限制你，而是幫你看見自己的運作模式。當你知道自己的核心需求、行動方式、財富模式與關係課題，就能少走一些重複的路。真正好的命盤使用方式，是把它變成決策工具。"
+            ),
+        ]
+
+    if plan == "deep":
+        return [
+            (
+                "命盤三大核心主題",
+                f"第一主題是人格結構：太陽 {sun_text}、月亮 {moon_text}、上升 {asc_text} 形成你的基本人生運作。第二主題是現實成就：MC {mc_text}、木星 {jupiter_text}、土星 {saturn_text} 顯示你如何建立事業、責任與長期成果。第三主題是深層轉化：主要相位、南北交點、莉莉絲與凱龍星會反覆推動你面對關係、資源與自我價值的成熟課題。"
+            ),
+            (
+                "第一部分：命盤深度解剖與靈魂結構分析",
+                "深度版不是只看單一星體，而是看整張命盤如何互相牽動。太陽代表人生方向，月亮代表情緒底層，上升代表你如何進入世界；宮位代表人生場景，相位代表內在動力，交點與特殊點則代表長期課題。"
+            ),
+            (
+                "核心性格的立體透視：日月升的三角張力",
+                f"太陽 {sun_text}、月亮 {moon_text}、上升 {asc_text} 是這張命盤的三角骨架。你可能一方面想把生活整理得有秩序，一方面又需要精神自由與情緒空間。"
+            ),
+            (
+                "行星落點與人格功能",
+                f"水星 {mercury_text} 影響你的學習與表達；金星 {venus_text} 影響關係與價值交換；火星 {mars_text} 影響行動力；木星 {jupiter_text} 帶來擴張機會；土星 {saturn_text} 要求你成熟與負責。"
+            ),
+            (
+                "宮位重心與人生主場景",
+                "宮位顯示人生能量集中在哪些領域。若多顆星集中在某些宮位，代表這些領域會成為人生反覆學習的主場景。"
+            ),
+            (
+                "主要相位與內在動力",
+                f"目前主要相位包括：{aspect_text}。深度版會把相位視為內在角色之間的對話。某些相位帶來天賦，某些相位帶來壓力，但真正的重點不是好壞，而是你能否把矛盾變成推動力。"
+            ),
+            (
+                "四個交點與人生十字軸",
+                f"ASC {asc_text}、DSC {dsc_text}、MC {mc_text}、IC {ic_text} 形成你的人生十字軸。它同時描述自我、關係、家庭根基與社會成就。"
+            ),
+            (
+                "南北交點、黑月莉莉絲與凱龍星",
+                "南交點代表熟悉但容易卡住的模式，北交點代表今生要發展的新能力。莉莉絲顯示你不願被控制或被壓抑的地方，凱龍星顯示傷口如何轉化成天賦。"
+            ),
+            (
+                "感情模式與互動方式",
+                f"感情模式需要看月亮 {moon_text}、金星 {venus_text} 與第七宮軸線。你在關係中需要的不只是吸引力，也需要理解、尊重與可對話的空間。"
+            ),
+            (
+                "事業發展與社會定位",
+                f"事業定位以 MC {mc_text} 為核心，並參考木星 {jupiter_text} 與土星 {saturn_text}。你適合建立自己的專業識別，而不是一直追逐別人的模式。"
+            ),
+            (
+                "財富運作與資源整合策略",
+                f"財富不是單純賺多少，而是資源如何流動。金星 {venus_text} 顯示價值交換，木星 {jupiter_text} 顯示機會擴張，土星 {saturn_text} 顯示限制與責任。建議把收入分成穩定現金流、專業產品化、長期資產三層。"
+            ),
+            (
+                "健康節律與日常修復模式",
+                "健康在占星報告中只作生活節律參考，不作醫療判斷。你的修復關鍵在於規律、睡眠、情緒排放與工作節奏。"
+            ),
+            (
+                "長周期運勢與年度轉折框架",
+                "年度策略不是預言事件，而是安排節奏。你可以把一年分成整理期、推進期、檢討期與擴張期。"
+            ),
+            (
+                "逐月行動曆與季度策略",
+                "第一季適合整理資料、修正定位與建立基本流程；第二季適合測試產品、增加曝光與建立合作；第三季適合檢查成效、調整價格與優化服務；第四季適合整合成果、沉澱品牌與規劃下一年度。"
+            ),
+            (
+                "深層課題與成熟方向",
+                "你的深層課題是學會把敏感、壓力、慾望與責任整合成自己的力量。成熟不是壓抑自己，而是知道什麼時候表達、什麼時候等待、什麼時候切割不適合的人事物。"
+            ),
+            (
+                "整體閱讀總結與後續建議",
+                "深度命盤的價值在於讓你看見長期模式。建議每三個月回來重讀一次：第一次看人格，第二次看財富，第三次看關係，第四次看年度策略。"
+            ),
+        ]
+
+    return []
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -980,11 +982,10 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
     )
 
     content = []
-
     utc_text = chart["utc_datetime"].isoformat()
 
-   content.append(Paragraph("專業本命星盤 × AI占星顧問報告", title))
-content.append(Paragraph(get_plan_label(plan), subtitle))
+    content.append(Paragraph("專業本命星盤 × AI占星顧問報告", title))
+    content.append(Paragraph(get_plan_label(plan), subtitle))
     content.append(Paragraph(
         f"姓名：{data.name or '未填'}　出生：{data.birth_date} {data.birth_time}　地點：{data.birth_place}　性別：{data.gender or '未填'}<br/>"
         f"系統：熱帶黃道 / Placidus　時區：{chart['timezone']}　UTC：{utc_text}",
@@ -1114,31 +1115,25 @@ content.append(Paragraph(get_plan_label(plan), subtitle))
     content.append(aspect_table)
 
     if plan == "free":
-    content.append(Paragraph("五、AI占星顧問式解讀", header))
+        content.append(Paragraph("五、AI占星顧問式解讀", header))
 
-    for h, t in generate_ai_advice(chart):
-        content.append(Paragraph(f"{h}：{t}", body))
+        for h, t in generate_ai_advice(chart):
+            content.append(Paragraph(f"{h}：{t}", body))
 
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("免費版升級提示", header))
-    content.append(Paragraph(
-        "此免費版提供完整排盤資料、星體位置、四軸與主要相位。完整付費版將加入財富宮位、職涯策略、感情合作、流年重點與更完整的 AI 深度解盤。",
-        body,
-    ))
-else:
-    content.append(Paragraph("五、付費版深度解讀", header))
-
-    paid_sections = get_paid_sections(plan, chart)
-
-    for section_title, section_text in paid_sections:
-        content.append(Paragraph(section_title, header))
-        content.append(Paragraph(section_text, body))
         content.append(Spacer(1, 12))
         content.append(Paragraph("免費版升級提示", header))
         content.append(Paragraph(
             "此免費版提供完整排盤資料、星體位置、四軸與主要相位。完整付費版將加入財富宮位、職涯策略、感情合作、流年重點與更完整的 AI 深度解盤。",
             body,
         ))
+    else:
+        content.append(Paragraph("五、付費版深度解讀", header))
+
+        paid_sections = get_paid_sections(plan, chart)
+
+        for section_title, section_text in paid_sections:
+            content.append(Paragraph(section_title, header))
+            content.append(Paragraph(section_text, body))
 
     content.append(Spacer(1, 16))
     content.append(Paragraph(
