@@ -100,7 +100,25 @@ PLANET_DEFS = [
     ("海王星", "Neptune", "♆", "NEPTUNE"),
     ("冥王星", "Pluto", "♇", "PLUTO"),
 ]
-
+def symbol_for_point(name: str) -> str:
+    symbol_map = {
+        "太陽": "☉",
+        "月亮": "☽",
+        "水星": "☿",
+        "金星": "♀",
+        "火星": "♂",
+        "木星": "♃",
+        "土星": "♄",
+        "天王星": "♅",
+        "海王星": "♆",
+        "冥王星": "♇",
+        "北交點": "☊",
+        "南交點": "☋",
+        "凱龍星": "Ch",
+        "莉莉絲": "Lil",
+        "福點": "⊗",
+    }
+    return symbol_map.get(name, "")
 CITY_FALLBACK = {
     "台北": (25.0330, 121.5654, "Asia/Taipei"),
     "台北市，台灣": (25.0330, 121.5654, "Asia/Taipei"),
