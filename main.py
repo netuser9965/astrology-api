@@ -470,7 +470,6 @@ def calculate_chart(data: BirthInput) -> Dict:
         "aspects": aspects,
     }
 
-
 class NatalChartFlowable(Flowable):
     def __init__(self, chart: Dict, size: float = 13.8 * cm):
         Flowable.__init__(self)
@@ -512,22 +511,30 @@ class NatalChartFlowable(Flowable):
         c.circle(cx, cy, house_r)
         c.circle(cx, cy, aspect_r)
 
+        # 12 星座區隔線與星座符號
         for i in range(12):
             deg = i * 30
             x1, y1 = self.angle_to_xy(deg, zodiac_r)
             x2, y2 = self.angle_to_xy(deg, outer_r)
+
             c.setStrokeColor(colors.HexColor("#B8B8B8"))
             c.setLineWidth(0.6)
             c.line(x1, y1, x2, y2)
 
             label_deg = deg + 15
-            lx, ly = self.angle_to_xy(label_deg, outer_r - 12)
-            sign_tw = ZODIAC_SIGNS[i][0]
-            self.draw_centered_text(sign_tw[:2], lx, ly, 8, colors.HexColor("#8A6B28"))
+            lx, ly = self.angle_to_xy(label_deg, outer_r - 13)
 
+            sign_tw = ZODIAC_SIGNS[i][0]
+            sign_symbol = ZODIAC_SIGNS[i][2]
+
+            self.draw_centered_text(sign_symbol, lx, ly + 4, 10, colors.HexColor("#8A6B28"))
+            self.draw_centered_text(sign_tw[:2], lx, ly - 8, 6.5, colors.HexColor("#8A6B28"))
+
+        # 宮位線與宮位數字
         for i, cusp in enumerate(self.chart["house_cusps"]):
             x1, y1 = self.angle_to_xy(cusp, aspect_r)
             x2, y2 = self.angle_to_xy(cusp, zodiac_r)
+
             c.setStrokeColor(colors.HexColor("#888888"))
             c.setLineWidth(0.6)
             c.line(x1, y1, x2, y2)
@@ -536,9 +543,11 @@ class NatalChartFlowable(Flowable):
             lx, ly = self.angle_to_xy(label_deg, house_r - 12)
             self.draw_centered_text(str(i + 1), lx, ly, 7, colors.HexColor("#333333"))
 
+        # 四軸
         for angle_name, deg in self.chart["angles"].items():
             x1, y1 = self.angle_to_xy(deg, aspect_r)
             x2, y2 = self.angle_to_xy(deg, outer_r + 10)
+
             c.setStrokeColor(colors.black)
             c.setLineWidth(1.5)
             c.line(x1, y1, x2, y2)
@@ -546,6 +555,7 @@ class NatalChartFlowable(Flowable):
             lx, ly = self.angle_to_xy(deg, outer_r + 23)
             self.draw_centered_text(angle_name.split()[0], lx, ly, 8, colors.black)
 
+        # 星體符號
         placed_count = {}
 
         for p in self.chart["all_points"]:
@@ -554,9 +564,14 @@ class NatalChartFlowable(Flowable):
             offset = (placed_count[key] - 1) * 10
 
             px, py = self.angle_to_xy(p["degree"], planet_r - offset)
-            short_name = p["name"][:2]
-            self.draw_centered_text(short_name, px, py, 7, colors.HexColor("#7A1E1E"))
 
+            symbol = p.get("glyph", "") or symbol_for_point(p["name"])
+            if not symbol:
+                symbol = p["name"][:2]
+
+            self.draw_centered_text(symbol, px, py + 2, 10, colors.HexColor("#7A1E1E"))
+
+        # 相位線
         aspect_colors = {
             0: colors.HexColor("#444444"),
             60: colors.HexColor("#4C9A65"),
@@ -576,7 +591,7 @@ class NatalChartFlowable(Flowable):
             x2, y2 = self.angle_to_xy(p2["degree"], aspect_r)
 
             c.setStrokeColor(aspect_colors.get(asp["aspect_deg"], colors.grey))
-            c.setLineWidth(0.4)
+            c.setLineWidth(0.45)
             c.line(x1, y1, x2, y2)
 
         c.setFont("STSong-Light", 8)
@@ -779,12 +794,14 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
     ]
 
     planet_rows = [["星體", "位置", "宮位"]]
-    for p in chart["all_points"]:
-        planet_rows.append([
-            p["name"],
-            p["position"],
-            f"第{p['house']}宮",
-        ])
+for p in chart["all_points"]:
+    symbol = p.get("glyph", "") or symbol_for_point(p["name"])
+    display_name = f"{symbol} {p['name']}".strip()
+    planet_rows.append([
+        display_name,
+        p["position"],
+        f"第{p['house']}宮",
+    ])
 
     angle_rows = [["四軸", "位置"]]
     for name, deg in chart["angles"].items():
@@ -830,13 +847,15 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
 
     content.append(Paragraph("二、星體位置表", header))
     full_planet_rows = [["星體", "星座位置", "宮位", "狀態"]]
-    for p in chart["all_points"]:
-        full_planet_rows.append([
-            p["name"],
-            p["position"],
-            f"第{p['house']}宮",
-            p.get("status", ""),
-        ])
+for p in chart["all_points"]:
+    symbol = p.get("glyph", "") or symbol_for_point(p["name"])
+    display_name = f"{symbol} {p['name']}".strip()
+    full_planet_rows.append([
+        display_name,
+        p["position"],
+        f"第{p['house']}宮",
+        p.get("status", ""),
+    ])
 
     full_planet_table = build_small_table(
         full_planet_rows,
