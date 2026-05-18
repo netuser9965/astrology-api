@@ -56,7 +56,7 @@ PAYMENT_PAGE_URL = os.getenv(
 OUTPUT_DIR = "generated_reports"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-app = FastAPI(title="Secure Astrology Report API")
+app = FastAPI(title="AI Astrology Report API")
 app.mount("/reports", StaticFiles(directory=OUTPUT_DIR), name="reports")
 
 
@@ -100,6 +100,35 @@ PLANET_DEFS = [
     ("海王星", "Neptune", "♆", "NEPTUNE"),
     ("冥王星", "Pluto", "♇", "PLUTO"),
 ]
+
+CITY_FALLBACK = {
+    "台北": (25.0330, 121.5654, "Asia/Taipei"),
+    "台北市": (25.0330, 121.5654, "Asia/Taipei"),
+    "台北，台灣": (25.0330, 121.5654, "Asia/Taipei"),
+    "台北市，台灣": (25.0330, 121.5654, "Asia/Taipei"),
+    "台中": (24.1477, 120.6736, "Asia/Taipei"),
+    "台中市": (24.1477, 120.6736, "Asia/Taipei"),
+    "台中，台灣": (24.1477, 120.6736, "Asia/Taipei"),
+    "台中市，台灣": (24.1477, 120.6736, "Asia/Taipei"),
+    "台南": (22.9999, 120.2270, "Asia/Taipei"),
+    "高雄": (22.6273, 120.3014, "Asia/Taipei"),
+    "東京": (35.6895, 139.6917, "Asia/Tokyo"),
+    "東京，日本": (35.6895, 139.6917, "Asia/Tokyo"),
+    "大阪": (34.6937, 135.5023, "Asia/Tokyo"),
+    "大阪，日本": (34.6937, 135.5023, "Asia/Tokyo"),
+    "紐約": (40.7128, -74.0060, "America/New_York"),
+    "紐約，美國": (40.7128, -74.0060, "America/New_York"),
+    "倫敦": (51.5072, -0.1276, "Europe/London"),
+    "倫敦，英國": (51.5072, -0.1276, "Europe/London"),
+    "香港": (22.3193, 114.1694, "Asia/Hong_Kong"),
+    "新加坡": (1.3521, 103.8198, "Asia/Singapore"),
+    "首爾": (37.5665, 126.9780, "Asia/Seoul"),
+    "首爾，韓國": (37.5665, 126.9780, "Asia/Seoul"),
+    "上海": (31.2304, 121.4737, "Asia/Shanghai"),
+    "北京": (39.9042, 116.4074, "Asia/Shanghai"),
+}
+
+
 def symbol_for_point(name: str) -> str:
     symbol_map = {
         "太陽": "☉",
@@ -119,21 +148,6 @@ def symbol_for_point(name: str) -> str:
         "福點": "⊗",
     }
     return symbol_map.get(name, "")
-CITY_FALLBACK = {
-    "台北": (25.0330, 121.5654, "Asia/Taipei"),
-    "台北市，台灣": (25.0330, 121.5654, "Asia/Taipei"),
-    "台中": (24.1477, 120.6736, "Asia/Taipei"),
-    "台中市，台灣": (24.1477, 120.6736, "Asia/Taipei"),
-    "東京": (35.6895, 139.6917, "Asia/Tokyo"),
-    "東京，日本": (35.6895, 139.6917, "Asia/Tokyo"),
-    "紐約": (40.7128, -74.0060, "America/New_York"),
-    "紐約，美國": (40.7128, -74.0060, "America/New_York"),
-    "倫敦": (51.5072, -0.1276, "Europe/London"),
-    "倫敦，英國": (51.5072, -0.1276, "Europe/London"),
-    "香港": (22.3193, 114.1694, "Asia/Hong_Kong"),
-    "新加坡": (1.3521, 103.8198, "Asia/Singapore"),
-    "首爾，韓國": (37.5665, 126.9780, "Asia/Seoul"),
-}
 
 
 def check_api_key(x_api_key: Optional[str]):
@@ -144,9 +158,12 @@ def check_api_key(x_api_key: Optional[str]):
 def normalize_plan(plan: Optional[str]) -> str:
     if not plan:
         return "free"
+
     plan = plan.lower().strip()
+
     if plan not in ["free", "starter", "standard", "deep"]:
         return "free"
+
     return plan
 
 
@@ -158,6 +175,7 @@ def zodiac_position(deg: float) -> Dict[str, str]:
     deg = normalize_degree(deg)
     sign_index = int(deg // 30)
     degree_in_sign = deg % 30
+
     d = int(degree_in_sign)
     m = int(round((degree_in_sign - d) * 60))
 
@@ -188,7 +206,10 @@ def parse_birth_datetime_utc(data: BirthInput) -> datetime:
     try:
         naive = datetime.strptime(f"{data.birth_date} {data.birth_time}", "%Y-%m-%d %H:%M")
     except Exception:
-        raise HTTPException(status_code=422, detail="出生日期或出生時間格式錯誤，請使用 YYYY-MM-DD 與 HH:MM。")
+        raise HTTPException(
+            status_code=422,
+            detail="出生日期或出生時間格式錯誤，請使用 YYYY-MM-DD 與 HH:MM。"
+        )
 
     tz_name = data.timezone or "Asia/Taipei"
 
@@ -208,6 +229,7 @@ def get_location(data: BirthInput) -> Tuple[float, float, str]:
         return float(data.latitude), float(data.longitude), data.timezone or "Asia/Taipei"
 
     place = data.birth_place or ""
+
     if place in CITY_FALLBACK:
         lat, lon, tz = CITY_FALLBACK[place]
         return lat, lon, data.timezone or tz
@@ -240,11 +262,6 @@ def calc_ut_safe(jd_ut: float, body_id: int) -> float:
         return normalize_degree(float(result[0][0]))
 
 
-def angular_distance(a: float, b: float) -> float:
-    diff = abs(normalize_degree(a) - normalize_degree(b))
-    return min(diff, 360.0 - diff)
-
-
 def is_retrograde(jd_ut: float, body_id: int) -> bool:
     try:
         result = swe.calc_ut(jd_ut, body_id, swe.FLG_SWIEPH | swe.FLG_SPEED)
@@ -259,6 +276,22 @@ def is_retrograde(jd_ut: float, body_id: int) -> bool:
             return False
 
 
+def angular_distance(a: float, b: float) -> float:
+    diff = abs(normalize_degree(a) - normalize_degree(b))
+    return min(diff, 360.0 - diff)
+
+
+def orb_to_text(orb: float) -> str:
+    d = int(orb)
+    m = int(round((orb - d) * 60))
+
+    if m >= 60:
+        d += 1
+        m -= 60
+
+    return f"{d}°{m:02d}′"
+
+
 def is_between_circular(value: float, start: float, end: float) -> bool:
     value = normalize_degree(value)
     start = normalize_degree(start)
@@ -266,6 +299,7 @@ def is_between_circular(value: float, start: float, end: float) -> bool:
 
     if start <= end:
         return start <= value < end
+
     return value >= start or value < end
 
 
@@ -273,8 +307,10 @@ def find_house(degree: float, house_cusps: List[float]) -> int:
     for i in range(12):
         start = house_cusps[i]
         end = house_cusps[(i + 1) % 12]
+
         if is_between_circular(degree, start, end):
             return i + 1
+
     return 1
 
 
@@ -298,13 +334,14 @@ def calculate_aspects(points: List[Dict]) -> List[Dict]:
             a = points[i]
             b = points[j]
 
-            if a["name"] in ["福點"] or b["name"] in ["福點"]:
+            if a["name"] == "福點" or b["name"] == "福點":
                 continue
 
             dist = angular_distance(a["degree"], b["degree"])
 
             for aspect_name, aspect_deg, orb_limit in aspect_defs:
                 orb = abs(dist - aspect_deg)
+
                 if orb <= orb_limit:
                     aspects.append({
                         "p1": a["name"],
@@ -318,15 +355,6 @@ def calculate_aspects(points: List[Dict]) -> List[Dict]:
 
     aspects.sort(key=lambda x: x["orb"])
     return aspects[:16]
-
-
-def orb_to_text(orb: float) -> str:
-    d = int(orb)
-    m = int(round((orb - d) * 60))
-    if m >= 60:
-        d += 1
-        m -= 60
-    return f"{d}°{m:02d}′"
 
 
 def calculate_chart(data: BirthInput) -> Dict:
@@ -353,6 +381,7 @@ def calculate_chart(data: BirthInput) -> Dict:
 
     house_cusps = [normalize_degree(float(x)) for x in houses_result[0][:12]]
     ascmc = houses_result[1]
+
     asc = normalize_degree(float(ascmc[0]))
     mc = normalize_degree(float(ascmc[1]))
     desc = normalize_degree(asc + 180.0)
@@ -388,6 +417,7 @@ def calculate_chart(data: BirthInput) -> Dict:
             "house": find_house(node_deg, house_cusps),
             "status": "",
         })
+
         south_deg = normalize_degree(node_deg + 180.0)
         extra_points.append({
             "name": "南交點",
@@ -406,7 +436,7 @@ def calculate_chart(data: BirthInput) -> Dict:
         extra_points.append({
             "name": "莉莉絲",
             "en_name": "Lilith",
-            "glyph": "Lilith",
+            "glyph": "Lil",
             "degree": lilith_deg,
             "position": degree_to_dms_text(lilith_deg),
             "house": find_house(lilith_deg, house_cusps),
@@ -436,7 +466,7 @@ def calculate_chart(data: BirthInput) -> Dict:
     extra_points.append({
         "name": "福點",
         "en_name": "Part of Fortune",
-        "glyph": "福",
+        "glyph": "⊗",
         "degree": fortune_deg,
         "position": degree_to_dms_text(fortune_deg),
         "house": find_house(fortune_deg, house_cusps),
@@ -469,6 +499,7 @@ def calculate_chart(data: BirthInput) -> Dict:
         "mc": mc,
         "aspects": aspects,
     }
+
 
 class NatalChartFlowable(Flowable):
     def __init__(self, chart: Dict, size: float = 13.8 * cm):
@@ -511,7 +542,6 @@ class NatalChartFlowable(Flowable):
         c.circle(cx, cy, house_r)
         c.circle(cx, cy, aspect_r)
 
-        # 12 星座區隔線與星座符號
         for i in range(12):
             deg = i * 30
             x1, y1 = self.angle_to_xy(deg, zodiac_r)
@@ -530,7 +560,6 @@ class NatalChartFlowable(Flowable):
             self.draw_centered_text(sign_symbol, lx, ly + 4, 10, colors.HexColor("#8A6B28"))
             self.draw_centered_text(sign_tw[:2], lx, ly - 8, 6.5, colors.HexColor("#8A6B28"))
 
-        # 宮位線與宮位數字
         for i, cusp in enumerate(self.chart["house_cusps"]):
             x1, y1 = self.angle_to_xy(cusp, aspect_r)
             x2, y2 = self.angle_to_xy(cusp, zodiac_r)
@@ -543,7 +572,6 @@ class NatalChartFlowable(Flowable):
             lx, ly = self.angle_to_xy(label_deg, house_r - 12)
             self.draw_centered_text(str(i + 1), lx, ly, 7, colors.HexColor("#333333"))
 
-        # 四軸
         for angle_name, deg in self.chart["angles"].items():
             x1, y1 = self.angle_to_xy(deg, aspect_r)
             x2, y2 = self.angle_to_xy(deg, outer_r + 10)
@@ -555,7 +583,6 @@ class NatalChartFlowable(Flowable):
             lx, ly = self.angle_to_xy(deg, outer_r + 23)
             self.draw_centered_text(angle_name.split()[0], lx, ly, 8, colors.black)
 
-        # 星體符號
         placed_count = {}
 
         for p in self.chart["all_points"]:
@@ -566,12 +593,12 @@ class NatalChartFlowable(Flowable):
             px, py = self.angle_to_xy(p["degree"], planet_r - offset)
 
             symbol = p.get("glyph", "") or symbol_for_point(p["name"])
+
             if not symbol:
                 symbol = p["name"][:2]
 
             self.draw_centered_text(symbol, px, py + 2, 10, colors.HexColor("#7A1E1E"))
 
-        # 相位線
         aspect_colors = {
             0: colors.HexColor("#444444"),
             60: colors.HexColor("#4C9A65"),
@@ -601,6 +628,7 @@ class NatalChartFlowable(Flowable):
 
 def build_small_table(data, col_widths):
     table = Table(data, colWidths=col_widths)
+
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "STSong-Light"),
         ("FONTSIZE", (0, 0), (-1, -1), 8.3),
@@ -612,12 +640,14 @@ def build_small_table(data, col_widths):
         ("TOPPADDING", (0, 0), (-1, -1), 3),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
+
     return table
 
 
 def get_core_summary(chart: Dict) -> str:
     sun = next((p for p in chart["planets"] if p["name"] == "太陽"), None)
     moon = next((p for p in chart["planets"] if p["name"] == "月亮"), None)
+
     asc = chart["angles"]["ASC 上升"]
 
     sun_sign = zodiac_position(sun["degree"])["sign_tw"] if sun else ""
@@ -626,8 +656,8 @@ def get_core_summary(chart: Dict) -> str:
 
     return (
         f"這張命盤以 {sun_sign} 太陽、{moon_sign} 月亮、{asc_sign} 上升為核心。"
-        "整體人格結構同時包含內在需求、外在表達與現實行動模式。免費版先呈現完整排盤資料，"
-        "付費版會進一步加入財運、事業、感情、相位與年度策略。"
+        "免費版先提供本命星盤圖、星體位置、四軸與主要相位。"
+        "完整付費版可進一步解讀財富模式、事業方向、感情合作、流年與年度策略。"
     )
 
 
@@ -637,15 +667,15 @@ def generate_ai_advice(chart: Dict) -> List[Tuple[str, str]]:
     return [
         (
             "財運模式",
-            "財富模式不適合只靠短線衝動，而適合把個人專長、知識、服務能力與長期規劃轉成穩定收入。若能建立系統化方法，財務累積會比單次機會更重要。"
+            "財富模式不適合只靠短線衝動，而適合把個人專長、知識、服務能力與長期規劃轉成穩定收入。"
         ),
         (
             "事業方向",
-            f"事業方向可參考天頂 {mc_sign}。適合發展專業服務、內容分析、顧問、創意、資料整合或需要判斷力與系統能力並用的領域。"
+            f"事業方向可參考天頂 {mc_sign}。適合發展專業服務、內容分析、顧問、創意或需要判斷力與系統能力並用的領域。"
         ),
         (
             "風險提醒",
-            "主要風險在於情緒壓力、過度理想化、或在關係與資源合作中缺乏邊界。建議所有財務與合作都要建立清楚規則。"
+            "主要風險在於情緒壓力、過度理想化，或在關係與資源合作中缺乏界線。建議所有財務與合作都要建立清楚規則。"
         ),
         (
             "感情模式",
@@ -659,7 +689,7 @@ def home():
     return """
     <meta charset="utf-8">
     <h1>AI 財富命盤 API 已上線</h1>
-    <p><a href="/form">前往正式表單頁</a></p>
+    <p><a href="/form">前往測試表單頁</a></p>
     <p><a href="/success">付款成功測試頁</a></p>
     <p><a href="/docs">API Docs</a></p>
     """
@@ -685,7 +715,7 @@ def form_page():
 
 @app.get("/success", response_class=HTMLResponse)
 def success_page():
-    return f"""
+    return """
 <!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -694,7 +724,7 @@ def success_page():
 </head>
 <body>
   <h1>付款成功測試頁</h1>
-  <p>正式綠界串接完成後，這裡會接收付款成功 token 並產生付費報告。</p>
+  <p>正式綠界或其他金流串接完成後，這裡會接收付款成功 token 並產生付費報告。</p>
 </body>
 </html>
     """
@@ -794,16 +824,19 @@ def generate_report(data: BirthInput, x_api_key: Optional[str] = Header(None)):
     ]
 
     planet_rows = [["星體", "位置", "宮位"]]
-for p in chart["all_points"]:
-    symbol = p.get("glyph", "") or symbol_for_point(p["name"])
-    display_name = f"{symbol} {p['name']}".strip()
-    planet_rows.append([
-        display_name,
-        p["position"],
-        f"第{p['house']}宮",
-    ])
+
+    for p in chart["all_points"]:
+        symbol = p.get("glyph", "") or symbol_for_point(p["name"])
+        display_name = f"{symbol} {p['name']}".strip()
+
+        planet_rows.append([
+            display_name,
+            p["position"],
+            f"第{p['house']}宮",
+        ])
 
     angle_rows = [["四軸", "位置"]]
+
     for name, deg in chart["angles"].items():
         angle_rows.append([name, degree_to_dms_text(deg)])
 
@@ -846,25 +879,31 @@ for p in chart["all_points"]:
     content.append(Paragraph(get_core_summary(chart), body))
 
     content.append(Paragraph("二、星體位置表", header))
+
     full_planet_rows = [["星體", "星座位置", "宮位", "狀態"]]
-for p in chart["all_points"]:
-    symbol = p.get("glyph", "") or symbol_for_point(p["name"])
-    display_name = f"{symbol} {p['name']}".strip()
-    full_planet_rows.append([
-        display_name,
-        p["position"],
-        f"第{p['house']}宮",
-        p.get("status", ""),
-    ])
+
+    for p in chart["all_points"]:
+        symbol = p.get("glyph", "") or symbol_for_point(p["name"])
+        display_name = f"{symbol} {p['name']}".strip()
+
+        full_planet_rows.append([
+            display_name,
+            p["position"],
+            f"第{p['house']}宮",
+            p.get("status", ""),
+        ])
 
     full_planet_table = build_small_table(
         full_planet_rows,
         [3.0 * cm, 6.2 * cm, 3.0 * cm, 3.0 * cm],
     )
+
     content.append(full_planet_table)
 
     content.append(Paragraph("三、四軸位置", header))
+
     full_angle_rows = [["四軸", "星座位置"]]
+
     for name, deg in chart["angles"].items():
         full_angle_rows.append([name, degree_to_dms_text(deg)])
 
@@ -872,10 +911,12 @@ for p in chart["all_points"]:
         full_angle_rows,
         [4.5 * cm, 8.0 * cm],
     )
+
     content.append(full_angle_table)
     content.append(PageBreak())
 
     content.append(Paragraph("四、主要相位", header))
+
     aspect_rows = [["相位", "容許度"]]
 
     if chart["aspects"]:
@@ -891,9 +932,11 @@ for p in chart["all_points"]:
         aspect_rows,
         [11.5 * cm, 4.0 * cm],
     )
+
     content.append(aspect_table)
 
     content.append(Paragraph("五、AI占星顧問式解讀", header))
+
     for h, t in generate_ai_advice(chart):
         content.append(Paragraph(f"{h}：{t}", body))
 
